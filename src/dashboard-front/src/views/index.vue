@@ -40,7 +40,6 @@
         <thead class="apigw-table-thead">
           <tr>
             <th class="name"> {{ $t('网关名') }} </th>
-            <th class="desc"> {{ $t('描述') }} </th>
             <th class="creator"> {{ $t('创建者') }} </th>
             <th class="env"> {{ $t('环境列表') }} </th>
             <th class="resource"> {{ $t('资源数量') }} </th>
@@ -63,39 +62,33 @@
                       <span v-if="apigw.hosting_type === 1" class="tips" v-bk-tooltips="$t('该网关使用专享实例托管资源')"> {{ $t('专享') }} </span>
                     </div>
                   </div>
-                  <div class="desc" style="text-align: left;">
-                    <template v-if="apigw.description">
-                      <p class="ag-text" style="max-width: 180px;" v-bk-overflow-tips>
-                        {{apigw.description}}
-                      </p>
-                    </template>
-                    <template v-else>
-                      --
-                    </template>
-                  </div>
-                  <div class="creator">{{apigw.created_by || '--'}}</div>
+                  <div class="creator" :title="apigw.created_by">{{apigw.created_by || '--'}}</div>
                   <div class="env">
-                    <bk-dropdown-menu ref="dropdown">
-                      <template slot="dropdown-trigger">
-                        <i :class="['ag-dot mr5',{ 'success': apigw.status !== 0 && apigw.stages[0].stage_release_status }]"></i>
-                        <span class="text">{{apigw.stages[0].stage_name}} {{apigw.stages[0].stage_release_status ? (apigw.status === 0 ? $t('已停用') : $t('已发布')) : $t('未发布')}}</span>
-                        <i :class="['apigateway-icon icon-ag-down-shape']"></i>
-                      </template>
-                      <div class="ag-detail-panel" slot="dropdown-content">
-                        <p class="panel-title"> {{ $t('列表详情') }} </p>
-                        <ul class="panel-list">
-                          <li v-for="stage of apigw.stages" :key="stage.id">
-                            <i :class="['ag-dot', { 'success': apigw.status !== 0 && stage.stage_release_status }]"></i>{{stage.stage_name}} {{stage.stage_release_status ? (apigw.status === 0 ? $t('已停用') : $t('已发布')) : $t('未发布')}}
-                          </li>
-                        </ul>
-                      </div>
-                    </bk-dropdown-menu>
+                    <div class="env-wrapper" :ref="apigw.name">
+                      <span
+                        v-for="(stage, index) in apigw.stages"
+                        v-if="index < apigw.tagOrder"
+                        :key="stage.id"
+                        class="tag mr5"
+                      >
+                        <i :class="['ag-dot mr5', { 'success': apigw.status !== 0 && apigw.stages[0].stage_release_status }]"></i>
+                        <span>{{ stage.stage_name }}</span>
+                      </span>
+                      <span
+                        v-if="apigw.isStageTips"
+                        v-bk-tooltips.light="getEnvHtmlConfig(apigw)"
+                        class="tag tag-count"
+                      >
+                        <span>+{{ apigw.stages.length - apigw.tagOrder }}</span>
+                      </span>
+                    </div>
                   </div>
-                  <div class="resource">{{apigw.resource_count}}</div>
+                  <div class="resource">
+                    <span>{{apigw.resource_count}}</span>
+                  </div>
                   <div class="action">
                     <bk-button class="mr10" :text="true" @click="handleGoPage('apigwStage', apigw)"> {{ $t('环境管理') }} </bk-button>
                     <bk-button class="mr10" :text="true" @click="handleGoPage('apigwResource', apigw)"> {{ $t('资源管理') }} </bk-button>
-                    <bk-button class="mr10" :text="true" @click="handleGoPage('apigwVersion', apigw)"> {{ $t('版本管理') }} </bk-button>
                     <bk-button class="mr10" :text="true" @click="handleGoPage('apigwAccessLog', apigw)"> {{ $t('流水日志') }} </bk-button>
                   </div>
                 </div>
@@ -117,13 +110,23 @@
         </tbody>
       </table>
     </ag-loader>
+
+    <create-apigw
+      :visible="isCreateApigw"
+      @close="isCreateApigw = false"
+      @refresh="reload"
+    />
   </div>
 </template>
 
 <script>
   import _ from 'lodash'
+  import createApigw from '@/views/base/create-apigw'
 
   export default {
+    components: {
+      createApigw
+    },
     data () {
       return {
         apigwListOrigin: [],
@@ -134,7 +137,8 @@
           keyword: ''
         },
         filterKey: 'updated_time',
-        isLoading: false
+        isLoading: false,
+        isCreateApigw: false
       }
     },
     computed: {
@@ -147,6 +151,18 @@
         if (oldVal && !newVal) {
           this.handleSearch()
         }
+      },
+      apigwList () {
+        this.apigwList.forEach(apigw => {
+          if (apigw.stages.length > apigw.tagOrder) {
+            this.$set(apigw, 'isStageTips', true)
+          }
+          this.$nextTick(() => {
+            // 根据环境的内容显示
+            const tagOrder = this.getTagOrder(apigw)
+            this.$set(apigw, 'tagOrder', tagOrder)
+          })
+        })
       }
     },
     created () {
@@ -180,9 +196,55 @@
       },
 
       goCreateApigw () {
-        this.$router.push({
-          name: 'createApigw'
-        })
+        this.isCreateApigw = true
+      },
+
+      reload () {
+        this.init()
+      },
+
+      // 生成环境对应 tips html
+      getEnvHtmlConfig (data) {
+        if (data.stages.length && data.isStageTips) {
+          let htmlStr = `<div id="tooltips-html-cls">`
+          // 是否只展示无法展示的环境
+          for (let i = 0; i < data.stages.length; i++) {
+            const stage = data.stages[i]
+            htmlStr += `<div class="tag">
+                <i class="ag-dot mr5 ${(data.status !== 0 && stage.stage_release_status) ? 'success' : ''}"></i>
+                <span>${stage.stage_name}</span>
+              </div>`
+          }
+          htmlStr += '</div>'
+
+          const config = {
+            allowHtml: true,
+            trigger: 'mouseenter',
+            theme: 'light',
+            content: htmlStr,
+            placement: 'bottom'
+          }
+          return config
+        }
+
+        return ''
+      },
+
+      // 获取展示资源的个数
+      getTagOrder (data) {
+        // 标签内容过多展示两个
+        const parentElWidth = document.querySelector('.index-container .env').offsetWidth || 390
+        const tagsEl = this.$refs[data.name][0].childNodes
+        const margin = tagsEl.length * 5
+        let tagsWidth = 0
+        for (let i = 0; i < tagsEl.length; i++) {
+          const width = tagsEl[i].offsetWidth
+          if (width > 0) {
+            tagsWidth += width
+          }
+        }
+
+        return (tagsWidth + margin) > parentElWidth ? 2 : 3
       },
 
       handleSearch (event) {
@@ -294,6 +356,7 @@
 
 <style lang="postcss" scoped>
     @import '@/css/variable.css';
+    @import '@/css/mixins/ellipsis.css';
 
     .header {
         position: absolute;
@@ -350,7 +413,14 @@
         position: static !important;
 
         .apigw-disabled {
-            color: #979BA5;
+            .text-wrapper {
+                color: #979BA5;
+            }
+
+            .data-item .logo {
+                background: #EAEBF0;
+                color: #FFF;
+            }
 
             .apigateway-icon,
             .ag-text {
@@ -359,7 +429,7 @@
         }
 
         .name {
-            width: 350px;
+            width: 400px;
             text-align: left;
         }
 
@@ -372,7 +442,33 @@
         }
 
         .env {
-            width: 175px;
+            width: 390px;
+
+            .env-wrapper {
+                white-space: nowrap;
+            }
+            .tag {
+                padding: 4px 8px;
+                background: #F0F1F5;
+                border-radius: 2px;
+
+                span {
+                    color: #63656E;
+                }
+
+                &.tag-count {
+                    margin-left: -4px;
+                }
+            }
+            .ag-dot {
+                background: #F0F1F5;
+                border: 1px solid #C4C6CC;
+
+                &.success {
+                    background: #E5F6EA;
+                    border: 1px solid #3FC06D;
+                }
+            }
         }
 
         .resource {
@@ -380,8 +476,12 @@
         }
 
         .action {
-            min-width: 300px;
+            min-width: 240px;
             flex: 1;
+
+            button {
+                color: #3A84FF;
+            }
         }
 
         > thead {
@@ -443,13 +543,13 @@
                 height: 50px;
                 text-align: center;
                 line-height: 50px;
-                background: #AAC8EF;
-                color: #FFF;
+                background: #F0F5FF;
+                color: #3A84FF;
                 font-size: 26px;
                 font-weight: bold;
                 border-radius: 4px;
                 display: inline-block;
-                margin-right: 10px;
+                margin-right: 20px;
                 vertical-align: middle;
                 margin-left: 14px;
             }
@@ -462,6 +562,18 @@
                 &:hover {
                     color: $primaryColor;
                 }
+            }
+
+            .resource {
+                text-align: center;
+                span {
+                    margin-left: -30px;
+                    color: #63656E;
+                }
+            }
+
+            .creator {
+                @mixin ellipsis;
             }
         }
 
@@ -513,16 +625,16 @@
         padding: 0 3px;
         font-size: 12px;
         font-weight: 400;
-        color: #3a84ff;
-        background-color: #edf4ff;
+        color: #FF9C01;
+        background-color: #FFF3E1;
         border-radius: 3px;
     }
     .official-tips {
         padding: 0 3px;
         font-size: 12px;
         font-weight: 400;
-        color: #3fc06d;
-        background-color: #e5f6ea;
+        color: #3A84FF;
+        background-color: #EDF4FF;
         border-radius: 3px;
     }
 
@@ -557,6 +669,10 @@
         span {
             line-height: 20px;
             margin: 0 3px;
+            &.disabled {
+                color: #979BA5;
+                background: #F0F1F5;
+            }
         }
     }
     .filter-selected {
@@ -582,5 +698,41 @@
       .apigw-table-thead {
         width: calc(100% - 6px);
       }
+    }
+</style>
+
+<style lang="postcss">
+    #tooltips-html-cls {
+        .tag {
+            padding: 4px 8px;
+            border-radius: 2px;
+            margin-bottom: 5px;
+            background: #F0F1F5;
+
+            &:first-child {
+                margin-top: 5px;
+            }
+
+            span {
+                color: #63656E;
+            }
+        }
+        .ag-dot {
+            width: 8px;
+            height: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            border-radius: 50%;
+            background: #F0F1F5;
+            border: 1px solid #C4C6CC;
+
+            &.success {
+                background: #E5F6EA;
+                border: 1px solid #3FC06D;
+            }
+            span {
+                color: #63656E;
+            }
+        }
     }
 </style>

@@ -185,8 +185,14 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .icon-ag-monitor-fill:before {
 	content: "\e135";
 }
+.icon-ag-edit-small:before {
+	content: "\e157";
+}
 .icon-ag-monitor:before {
 	content: "\e134";
+}
+.icon-ag-lock-fill1:before {
+	content: "\e15a";
 }
 .icon-ag-copy:before {
 	content: "\e14c";
@@ -239,12 +245,21 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .icon-ag-insights:before {
 	content: "\e144";
 }
+.icon-ag-download:before {
+	content: "\e159";
+}
 .icon-ag-miniapi:before {
 	content: "\e141";
 }
 .icon-ag-permission:before {
 	content: "\e142";
 }
+.icon-ag-edit-line:before {
+	content: "\e158";
+}
 .icon-ag-zonghe:before {
 	content: "\e148";
+}
+.icon-ag-gengduo:before {
+	content: "\e156";
 }

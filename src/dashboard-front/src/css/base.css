@@ -1,0 +1,77 @@
+.apigw-card {
+    background: #fff;
+    padding: 24px;
+    border-radius: 2px;
+    box-shadow: 0 2px 4px 0 #1919290d;
+}
+
+.apigw-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #313238;
+    margin-bottom: 22px;
+}
+
+.apigw-tag {
+    font-size: 12px;
+    padding: 2px 6px;
+    border-radius: 2px;
+    color: #3A84FF;
+    background: #EDF4FF;
+    
+    &.warning {
+        color: #FE9C00;
+        background: #FFF1DB;
+    }
+
+    &.success {
+        color: #14A568;
+        background: #E4FAF0;
+    }
+
+    &.disabled {
+        color: #63656E;
+        background: #F0F1F5;
+    }
+}
+
+.apigw-item {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: #63656E;
+  .item-label {
+    flex-shrink: 0;
+    height: 32px;
+    line-height: 32px;
+    text-align: right;
+  }
+  .item-value {
+    display: flex;
+    align-items: center;
+    height: 40px;
+    line-height: 40px;
+    width: 100%;
+    color: #313238;
+  }
+}
+
+.icon-hover {
+  color: #979BA5;
+  font-size: 14px;
+  &:hover {
+    color: #3A84FF;
+    cursor: pointer;
+  }
+}
+
+
+.mb17 {
+    margin-bottom: 17px;
+}
+.ml4 {
+    margin-left: 4px;
+}
+.mt8 {
+    margin-top: 8px;
+}

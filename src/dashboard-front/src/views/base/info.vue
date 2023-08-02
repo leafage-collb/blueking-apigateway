@@ -1,154 +1,163 @@
 <template>
   <div class="app-content">
-    <section style="width: 800px;">
-      <bk-alert v-if="!curApigw.statusBoolean" type="warning" class="warning-alert" :title="$t('当前网关已停用，如需使用，请先启用')"></bk-alert>
-      <bk-container class="ag-form-info" :col="12">
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('名称') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">{{curApigw.name}}</div>
-          </bk-col>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('创建者') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">{{curApigw.created_by || '--'}}</div>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('描述') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">
-              <bk-popover placement="right">
-                <p class="ag-field-text" style="max-width: 200px;">{{curApigw.description || '--'}}</p>
-                <div slot="content" style="white-space: normal; max-width: 300px;">
-                  {{curApigw.description || '--'}}
-                </div>
-              </bk-popover>
+    <bk-alert v-if="!curApigw.statusBoolean" type="warning" class="warning-alert" :title="$t('当前网关已停用，如需使用，请先启用')"></bk-alert>
+    <section class="apigw-card top-editing mb17">
+      <div class="logo-wrapper">
+        <span :class="['logo', curApigw.statusBoolean ? '' : 'disabled']">{{ curApigw.name[0] && curApigw.name[0].toUpperCase() }}</span>
+      </div>
+      <div class="left-info">
+        <div>
+          <span :class="['name', 'mr5', curApigw.statusBoolean ? '' : 'disabled']">{{ curApigw.name }}</span>
+          <span v-if="curApigw.is_official" class="apigw-tag mr5"> {{ $t('官方') }} </span>
+          <span v-if="curApigw.hosting_type === 1" class="apigw-tag warning mr5" v-bk-tooltips="$t('该网关使用专享实例托管资源')"> {{ $t('专享') }} </span>
+          <span :class="['apigw-tag', curApigw.statusBoolean ? 'success' : 'disabled']">
+            <i class="apigateway-icon icon-ag-minus-circle" v-if="!curApigw.statusBoolean"></i>
+            {{ curApigw.statusBoolean ? $t('启用中') : $t('已停用') }}
+          </span>
+        </div>
+        <div class="apigw-item mb15">
+          <div class="item-label"> {{ $t('简介') }}： </div>
+          <div class="item-value">
+            <template v-if="!isEdit.description">
+              {{curApigw.description || '--'}}
+              <i class="apigateway-icon icon-ag-edit-line icon-hover ml4" @click="handleEdit('description')" v-bk-clickoutside="handleClickOutSide"></i>
+            </template>
+            <bk-input
+              v-else
+              ref="description"
+              v-model="curApigw.description"
+              style="width: 560px;"
+              @blur="handleBlur('description')"
+              @enter="handleBlur('description', 'enter')"
+            ></bk-input>
+          </div>
+        </div>
+        <div class="operate">
+          <bk-button theme="default" class="mr5" style="width: 88px;" @click="editApigw"> {{ $t('编辑') }} </bk-button>
+          <template v-if="curApigw.status">
+            <bk-button theme="default" class="mr5 stop-btn" style="width: 88px;" @click="toggleApigwStatus"> {{ $t('停用') }} </bk-button>
+          </template>
+          <template v-else>
+            <bk-button theme="primary" class="mr5" style="width: 88px;" @click="toggleApigwStatus"> {{ $t('立即启用') }} </bk-button>
+          </template>
+          <template v-if="curApigw.statusBoolean">
+            <bk-popover :content="$t('请先停用才可删除')">
+              <bk-button theme="default" class="mr5" style="width: 88px;" :disabled="curApigw.statusBoolean"> {{ $t('删除') }} </bk-button>
+            </bk-popover>
+          </template>
+          <template v-else>
+            <bk-button theme="default" class="mr5" style="width: 88px;" @click="removeApigw"> {{ $t('删除') }} </bk-button>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <section class="apigw-card base-info">
+      <p class="apigw-title">{{ $t('基本信息') }}</p>
+
+      <!-- 基本信息 -->
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('是否公开') }}：
+        </div>
+        <div class="item-value">
+          <bk-switcher v-model="curApigw.is_public" theme="primary" @change="handlePublicChange"></bk-switcher>
+        </div>
+      </div>
+
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('访问域名') }}：
+        </div>
+        <div class="item-value">
+          {{curApigw.domain}}
+          <i class="apigateway-icon icon-ag-copy ml10 copy-btn icon-hover" @click="handleCopy(curApigw.domain)"></i>
+          <!-- <a :href="curApigw.domain" target="_blank"><i class="apigateway-icon icon-ag-jump ml5"></i></a> -->
+        </div>
+      </div>
+
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('文档地址') }}：
+        </div>
+        <div class="item-value">
+          <template v-if="curApigw.is_public">
+            {{curApigw.docs_url}}
+            <i class="apigateway-icon icon-ag-copy ml10 copy-btn icon-hover" @click="handleCopy(curApigw.docs_url)"></i>
+            <!-- <a :href="curApigw.docs_url" target="_blank"><i class="apigateway-icon icon-ag-jump ml5"></i></a> -->
+          </template>
+          <template v-else>
+            <span style="color: #dcdee5;"> {{ $t('网关未公开，不提供在线 API 文档') }} </span>
+          </template>
+        </div>
+      </div>
+
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('维护人员') }}：
+        </div>
+        <div class="item-value">
+          <template v-if="!isEdit.maintainers">
+            <bk-popover placement="right">
+              <p class="ag-field-text" style="max-width: 200px; margin-top: -3px;">{{curApigw.maintainers.join('; ')}}</p>
+              <div slot="content" style="white-space: normal; max-width: 300px;">
+                {{curApigw.maintainers.join('; ')}}
+              </div>
+            </bk-popover>
+            <i class="apigateway-icon icon-ag-edit-line icon-hover ml4" @click="handleEdit('maintainers')"></i>
+          </template>
+          <user
+            v-else
+            ref="maintainers"
+            v-model="curApigw.maintainers"
+            style="width: 560px;"
+            @blur="handleBlur('maintainers')"
+          ></user>
+        </div>
+      </div>
+
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('创建人') }}：
+        </div>
+        <div class="item-value">
+          <div class="ag-form-content">{{curApigw.created_by || '--'}}</div>
+        </div>
+      </div>
+
+      <div class="apigw-form-item">
+        <div class="item-label">
+          {{ $t('创建时间') }}：
+        </div>
+        <div class="item-value">
+          <div class="ag-form-content">{{curApigw.created_time || '--'}}</div>
+        </div>
+      </div>
+
+      <p class="apigw-title mt40"> {{ $t('API公钥(指纹)') }} </p>
+
+      <div class="apigw-form-item">
+        <div class="item-label"></div>
+        <div class="item-value">
+          <div class="ag-key-value">
+            <div class="key">
+              <i class="apigateway-icon icon-ag-lock-fill1"></i>
             </div>
-          </bk-col>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('创建时间') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">{{curApigw.created_time || '--'}}</div>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('网关状态') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">
-              <span :class="['status-dot', { 'success': curApigw.statusBoolean }]">
-                {{ curApigw.statusBoolean ? $t('已启用') : $t('已停用') }}
+            <div class="value">
+              <span class="f14">{{curApigw.public_key_fingerprint}}</span>
+              <span>
+                <i class="apigateway-icon icon-ag-download icon-hover fr ml10" @click="download"></i>
+                <i class="apigateway-icon icon-ag-copy copy-btn icon-hover fr" @click="handleCopy(curApigw.public_key)"></i>
               </span>
             </div>
-          </bk-col>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('维护人员') }} </div>
-          </bk-col>
-          <bk-col :span="4">
-            <div class="ag-form-content">
-              <bk-popover placement="right">
-                <p class="ag-field-text" style="max-width: 200px; margin-top: -3px;">{{curApigw.maintainers.join('; ')}}</p>
-                <div slot="content" style="white-space: normal; max-width: 300px;">
-                  {{curApigw.maintainers.join('; ')}}
-                </div>
-              </bk-popover>
-            </div>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('是否公开') }} </div>
-          </bk-col>
-          <bk-col :span="10">
-            <div class="ag-form-content">
-              <span class="is-public">{{ curApigw.is_public ? $t('是') : $t('否') }}</span>
-            </div>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('访问域名') }} </div>
-          </bk-col>
-          <bk-col :span="10">
-            <div class="ag-form-content">
-              {{curApigw.domain}}
-              <i class="apigateway-icon icon-ag-document ml15 copy-btn" @click="handleCopy(curApigw.domain)"></i>
-              <!-- <a :href="curApigw.domain" target="_blank"><i class="apigateway-icon icon-ag-jump ml5"></i></a> -->
-            </div>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('文档地址') }} </div>
-          </bk-col>
-          <bk-col :span="10">
-            <div class="ag-form-content">
-              <template v-if="curApigw.is_public">
-                {{curApigw.docs_url}}
-                <i class="apigateway-icon icon-ag-document ml15 copy-btn" @click="handleCopy(curApigw.docs_url)"></i>
-                <!-- <a :href="curApigw.docs_url" target="_blank"><i class="apigateway-icon icon-ag-jump ml5"></i></a> -->
-              </template>
-              <template v-else>
-                <span style="color: #dcdee5;"> {{ $t('网关未公开，不提供在线 API 文档') }} </span>
-              </template>
-            </div>
-          </bk-col>
-        </bk-row>
-      </bk-container>
-      <div class="ag-span"></div>
-      <bk-container class="ag-form-info" :col="12">
-        <bk-row>
-          <bk-col :span="2">
-            <div class="ag-form-label"> {{ $t('API公钥(指纹)') }} </div>
-          </bk-col>
-          <bk-col :span="10">
-            <div class="ag-form-content">
-              <div class="ag-key-value">
-                <div class="key">
-                  <i class="apigateway-icon icon-ag-lock"></i>
-                </div>
-                <div class="value">
-                  <span class="f14">{{curApigw.public_key_fingerprint}}</span>
-                  <bk-button theme="primary" class="fr f12 ml10" :text="true" @click="download"> {{ $t('下载') }} </bk-button>
-                  <bk-button theme="primary" class="fr f12 copy-btn" :text="true" @click="handleCopy(curApigw.public_key)"> {{ $t('复制') }} </bk-button>
-                </div>
-              </div>
-            </div>
-            <p class="ag-tip mt5">
-              <i class="apigateway-icon icon-ag-info"></i>
-              {{ $t('可用于解密传入后端接口的请求头 X-Bkapi-JWT') }}，
-              <a :href="GLOBAL_CONFIG.DOC.JWT" target="_blank" class="ag-primary"> {{ $t('更多详情') }} </a>
-            </p>
-          </bk-col>
-        </bk-row>
-        <bk-row>
-          <bk-col :span="10" :offset="2">
-            <bk-button theme="primary" class="mr5" style="width: 108px;" @click="editApigw"> {{ $t('编辑') }} </bk-button>
-            <template v-if="curApigw.status">
-              <bk-button theme="default" class="mr5 stop-btn" @click="toggleApigwStatus"> {{ $t('停用') }} </bk-button>
-            </template>
-            <template v-else>
-              <bk-button theme="default" class="mr5" @click="toggleApigwStatus"> {{ $t('启用') }} </bk-button>
-            </template>
-            <template v-if="curApigw.statusBoolean">
-              <bk-popover :content="$t('请先停用才可删除')">
-                <bk-button theme="default" class="mr5" :disabled="curApigw.statusBoolean"> {{ $t('删除') }} </bk-button>
-              </bk-popover>
-            </template>
-            <template v-else>
-              <bk-button theme="default" class="mr5" @click="removeApigw"> {{ $t('删除') }} </bk-button>
-            </template>
-          </bk-col>
-        </bk-row>
-      </bk-container>
+          </div>
+          <p class="ag-tip mt8">
+            <i class="apigateway-icon icon-ag-info"></i>
+            {{ $t('可用于解密传入后端接口的请求头 X-Bkapi-JWT') }}，
+            <a :href="GLOBAL_CONFIG.DOC.JWT" target="_blank" class="ag-primary"> {{ $t('更多详情') }} </a>
+          </p>
+        </div>
+      </div>
     </section>
 
     <bk-dialog
@@ -179,13 +188,27 @@
         </bk-button>
       </template>
     </bk-dialog>
+
+    <create-apigw
+      :visible="isEditApigw"
+      :apigw-id="curApigw.id"
+      @close="isEditApigw = false"
+      @refresh="reload"
+    />
   </div>
 </template>
 
 <script>
   import { catchErrorHandler } from '@/common/util'
+  import { bus } from '@/common/bus'
+  import createApigw from '@/views/base/create-apigw'
+  import User from '@/components/user'
 
   export default {
+    components: {
+      createApigw,
+      User
+    },
     data () {
       return {
         isPageLoading: true,
@@ -203,7 +226,13 @@
           visiable: false,
           isLoading: false
         },
-        formRemoveConfirmApigw: ''
+        formRemoveConfirmApigw: '',
+        isEditApigw: false,
+        isEdit: {
+          description: false,
+          maintainers: false
+        },
+        isUpdate: false
       }
     },
     computed: {
@@ -238,12 +267,12 @@
       },
 
       editApigw () {
-        this.$router.push({
-          name: 'apigwEdit',
-          params: {
-            id: this.curApigw.id
-          }
-        })
+        this.isEditApigw = true
+      },
+
+      reload () {
+        // 刷新当前组件
+        bus.$emit('update-component')
       },
 
       download () {
@@ -335,6 +364,60 @@
             message: this.$t('复制失败')
           })
         })
+      },
+
+      handleEdit (key) {
+        this.isEdit[key] = !this.isEdit[key]
+        this.isUpdate = true
+        this.$nextTick(() => {
+          this.$refs[key].focus()
+        })
+      },
+
+      handleBlur (key, eventName) {
+        if (this.isEdit[key]) {
+          this.isEdit[key] = false
+          eventName && this.updateApigw()
+        }
+      },
+
+      handlePublicChange () {
+        this.updateApigw()
+      },
+
+      handleClickOutSide (mousedownEvent, mouseupEvent, el) {
+        const classList = Array.from(mousedownEvent.target.classList)
+        // 过滤icon点击响应
+        if (classList.includes('icon-ag-edit-line')) {
+          return false
+        }
+        if (this.isUpdate) {
+          this.updateApigw()
+          this.isUpdate = false
+        }
+      },
+
+      // 更新基本信息
+      async updateApigw () {
+        const apigwId = this.$route.params.id
+        try {
+          const params = {
+            apigwId,
+            data: this.curApigw
+          }
+          params.data.status = Number(this.curApigw.statusBoolean)
+
+          await this.$store.dispatch('apis/updateApis', params)
+          // 编辑成功，重新获取基本信息
+          this.$bkMessage({
+            theme: 'success',
+            message: this.$t('更新成功！')
+          })
+        } catch (e) {
+          catchErrorHandler(e, this)
+        } finally {
+          this.getApigwDetail()
+        }
       }
     }
   }
@@ -412,6 +495,59 @@
     .warning-alert {
         margin-bottom: 16px;
     }
+
+    .top-editing {
+        display: flex;
+        width: 100%;
+        .logo {
+            width: 80px;
+            height: 80px;
+            text-align: center;
+            line-height: 80px;
+            background: #F0F5FF;
+            color: #3A84FF;
+            font-size: 40px;
+            font-weight: bold;
+            border-radius: 8px;
+            display: inline-block;
+            margin-right: 20px;
+            vertical-align: middle;
+            margin-left: 14px;
+            &.disabled {
+                color: #C4C6CC;
+                background: #F0F1F5;
+            }
+        }
+        .left-info {
+            padding-top: 16px;
+            width: 50%;
+            .name {
+                font-size: 16px;
+                color: #313238;
+                font-weight: 700;
+                &.disabled {
+                    color: #63656E;
+                }
+            }
+        }
+    }
+    .apigw-form-item {
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        line-height: 32px;
+        margin-bottom: 8px;
+        .item-label {
+            width: 158px;
+            text-align: right;
+            color: #63656E;
+        }
+        .item-value {
+            flex: 1;
+            margin-right: 300px;
+            color: #313238;
+        }
+    }
 </style>
 <style>
     .gateway-del-tips {
@@ -420,5 +556,9 @@
         margin: 0;
         background-color: rgba(0, 0, 0, 0.04);
         border-radius: 3px;
+    }
+
+    .ag-form-info .bk-grid-row .bk-grid-col:last-child {
+      padding-left: 0 !important;
     }
 </style>

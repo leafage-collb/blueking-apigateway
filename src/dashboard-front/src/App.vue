@@ -1167,6 +1167,7 @@
     @import './css/app-doc.css';
     @import './css/reset.css';
     @import './css/app.css';
+    @import './css/base.css';
 
     .ag-project-logo {
         width: 34px;

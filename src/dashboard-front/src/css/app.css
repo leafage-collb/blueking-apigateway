@@ -411,15 +411,15 @@ body {
         margin-bottom: 20px;
     }
     .ag-form-label {
-        font-size: 14px;
+        font-size: 12px;
         text-align: right;
         color: #63656E;
         padding-right: 4px;
     }
 
     .ag-form-content {
-        font-size: 14px;
-        color: #000;
+        font-size: 12px;
+        color: #313238;
     }
 }
 
@@ -456,28 +456,29 @@ body {
 
 .ag-key-value {
     width: 560px;
-    border: 1px solid #DCDEE5;
     border-radius: 2px;
     overflow: hidden;
     display: flex;
-    background: #FFF;
+    background: #F5F7FA;
 
     .key {
         width: 40px;
         line-height: 40px;
-        border-right: 1px solid #DCDEE5;
-        background: #FAFBFD;
         text-align: center;
-        color: #C4C6CC;
+        color: #979BA5;
         font-size: 16px;
+        background: #F0F1F5;
     }
 
     .value {
         line-height: 40px;
         padding: 0 8px;
         font-size: 12px;
-        color: #000;
+        color: #979BA5;
         flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
     }
 }
 

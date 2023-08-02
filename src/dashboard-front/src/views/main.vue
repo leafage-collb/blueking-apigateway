@@ -15,18 +15,20 @@
       </div>
     </div>
     <ag-loader :loader="$route.meta.loader" :is-loading="mainContentLoading">
-      <router-view :key="$route.path" ref="component"></router-view>
+      <router-view :key="$route.path + count" ref="component"></router-view>
     </ag-loader>
   </div>
 </template>
 
 <script>
   import { catchErrorHandler } from '@/common/util'
+  import { bus } from '@/common/bus'
   export default {
     data () {
       return {
         syncEsbToApigwEnabled: false,
-        esb: {}
+        esb: {},
+        count: 0
       }
     },
     computed: {
@@ -49,6 +51,9 @@
       if (this.GLOBAL_CONFIG.PLATFORM_FEATURE.MENU_ITEM_ESB_API) {
         this.getEsbGateway()
       }
+      bus.$on('update-component', data => {
+        this.updateComponent()
+      })
     },
     methods: {
       goBack () {
@@ -91,6 +96,9 @@
         } catch (e) {
           catchErrorHandler(e, this)
         }
+      },
+      updateComponent () {
+        this.count++
       }
     }
   }
