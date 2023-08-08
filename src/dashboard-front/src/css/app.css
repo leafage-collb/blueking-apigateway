@@ -512,9 +512,9 @@ body {
 .ag-panel {
     display: flex;
     width: 100%;
-    border: 1px solid #DCDEE5;
     border-radius: 2px;
     margin-bottom: 15px;
+    box-shadow: 0 2px 4px 0 #1919290d;
 
     &.small {
         .panel-key {
@@ -575,8 +575,33 @@ body {
     .panel-wrapper {
         width: 90%;
         max-width: 1080px;
-        margin: 30px 0;
+        margin: 0 0 30px;
+        display: none;
     }
+
+    .resource-card-title {
+        font-weight: 700;
+        font-size: 14px;
+        padding: 24px 0 24px 24px;
+        user-select: none;
+        cursor: pointer;
+        .bk-icon {
+            color: #63656E;
+            display: inline-block;
+            transform-origin: center;
+            transition: all ease 0.3s;
+            transform: translateY(-1px);
+        }
+    }
+    &.expanded {
+        .panel-wrapper {
+            display: block;
+        }
+        .resource-card-title .bk-icon {
+            transform: rotate(90deg) translateX(-2px);
+        }
+    }
+
 }
 
 .ag-panel-action {

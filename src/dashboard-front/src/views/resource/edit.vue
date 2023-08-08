@@ -25,11 +25,12 @@
       </div>
     </div>
     <bk-alert class="mb15" type="warning" :title="$t('官方网关，修改资源配置，可能导致资源不可访问，并且配置有被覆盖的风险，请谨慎修改')" v-if="OfficialApiTipsEnabledFlag && curApigw.is_official"></bk-alert>
-    <section class="ag-panel">
-      <div class="panel-key">
-        <strong> {{ $t('基本信息') }} </strong>
-      </div>
+    <section :class="['ag-panel', { 'expanded': isExpandedConfig.baseInfo }]">
       <div class="panel-content">
+        <div class="resource-card-title" @click="handleToggle('baseInfo')">
+          <i class="bk-icon icon-right-shape"></i>
+          {{ $t('基本信息') }}
+        </div>
         <div class="panel-wrapper">
           <bk-form
             ref="nameForm"
@@ -44,7 +45,7 @@
               :error-display-type="'normal'">
               <bk-input :placeholder="$t('由字母、数字、下划线（_）组成，首字符必须是字母，长度小于256个字符')" v-model="curResource.name"></bk-input>
               <p slot="tip" class="ag-tip mt5">
-                <i class="apigateway-icon icon-ag-info"></i> {{ $t('资源名称在网关下唯一，将在SDK中用作操作名称，若修改，请联系SDK用户做相应调整') }}
+                {{ $t('资源名称在网关下唯一，将在SDK中用作操作名称，若修改，请联系SDK用户做相应调整') }}
               </p>
             </bk-form-item>
             <bk-form-item :label="$t('描述')">
@@ -136,22 +137,60 @@
                   </template>
                 </div>
               </bk-select>
-              <!-- <bk-tag-input
-                                placeholder="请选择"
-                                v-model="curResource.label_ids"
-                                :trigger="'focus'"
-                                :list="labelList"
-                                :allow-next-focus="false"
-                                :content-max-height="200">
-                            </bk-tag-input> -->
             </bk-form-item>
-            <bk-form-item :label="$t('是否公开')" :desc="$t('公开，则用户可查看资源文档、申请资源权限；不公开，则资源对用户隐藏')" desc-type="icon">
+            <!-- 安全设置 -->
+            <bk-form-item :label="$t('应用认证')">
+              <bk-switcher
+                class="mr20"
+                theme="primary"
+                :disabled="!curApigw.allow_update_api_auth"
+                v-model="curResource.auth_config.app_verified_required">
+              </bk-switcher>
+              <bk-checkbox
+                :true-value="true"
+                :false-value="false"
+                :disabled="!curResource.auth_config.app_verified_required || !curApigw.allow_update_api_auth"
+                v-model="curResource.auth_config.resource_perm_required">
+                {{ $t('校验访问权限') }}
+              </bk-checkbox>
+              <p class="ag-tip mt5">
+                {{ $t('应用认证，请求方需提供蓝鲸应用身份信息；校验访问权限，蓝鲸应用需申请资源访问权限。') }}
+                <a :href="GLOBAL_CONFIG.DOC.AUTH" target="_blank" class="ag-primary">{{ $t('更多详情') }}</a>
+              </p>
+            </bk-form-item>
+            <bk-form-item :label="$t('用户认证')">
+              <bk-switcher
+                v-model="curResource.auth_config.auth_verified_required"
+                theme="primary">
+              </bk-switcher>
+              <p class="ag-tip mt5">
+                {{ $t('用户认证，请求方需提供蓝鲸用户身份信息。') }}
+                <a :href="GLOBAL_CONFIG.DOC.AUTH" target="_blank" class="ag-primary">{{ $t('更多详情') }}</a>
+              </p>
+            </bk-form-item>
+
+            <bk-form-item :label="$t('禁用环境')" v-if="resourceDisableStageEnabledFlag">
+              <bk-select
+                searchable
+                multiple
+                show-select-all
+                v-model="curResource.disabled_stage_ids">
+                <bk-option v-for="option in stageList"
+                  :key="option.id"
+                  :id="option.id"
+                  :name="option.name">
+                </bk-option>
+              </bk-select>
+              <p class="ag-tip mt10">
+                {{ $t('资源将不会发布到对应的环境') }}
+              </p>
+            </bk-form-item>
+            <bk-form-item :label="$t('是否公开')" :desc="$t('公开，则用户可查看资源文档、申请资源权限；不公开，则资源对用户隐藏')">
               <bk-switcher v-model="curResource.is_public" theme="primary" @change="handlePublicChange"></bk-switcher>
             </bk-form-item>
             <bk-form-item
               :label="$t('允许申请权限')"
-              :desc="$t('允许，则任何蓝鲸应用可在蓝鲸开发者中心申请资源的访问权限；否则，只能通过网关管理员主动授权为某应用添加权限')"
-              :desc-type="'icon'">
+              :desc="$t('允许，则任何蓝鲸应用可在蓝鲸开发者中心申请资源的访问权限；否则，只能通过网关管理员主动授权为某应用添加权限')">
               <bk-switcher v-model="curResource.allow_apply_permission" :disabled="!curResource.is_public" theme="primary"></bk-switcher>
             </bk-form-item>
           </bk-form>
@@ -159,11 +198,12 @@
       </div>
     </section>
 
-    <section class="ag-panel">
-      <div class="panel-key">
-        <strong> {{ $t('前端配置') }} </strong>
-      </div>
+    <section :class="['ag-panel', { 'expanded': isExpandedConfig.webConfig }]">
       <div class="panel-content">
+        <div class="resource-card-title" @click="handleToggle('webConfig')">
+          <i class="bk-icon icon-right-shape"></i>
+          {{ $t('前端配置') }}
+        </div>
         <div class="panel-wrapper">
           <bk-form ref="frontendForm" :label-width="190" :model="curResource">
             <bk-form-item
@@ -210,7 +250,7 @@
               </div>
               <div slot="tip">
                 <p class="ag-tip mt5">
-                  <i class="apigateway-icon icon-ag-info"></i>{{ $t('资源请求路径支持路径变量，包含在{}中，如：/users/{id}/') }}
+                  {{ $t('资源请求路径支持路径变量，包含在{}中，如：/users/{id}/') }}
                 </p>
               </div>
             </bk-form-item>
@@ -220,11 +260,12 @@
       </div>
     </section>
 
-    <section class="ag-panel">
-      <div class="panel-key">
-        <strong>{{ $t('后端配置') }}</strong>
-      </div>
+    <section :class="['ag-panel', { 'expanded': isExpandedConfig.backendConfig }]">
       <div class="panel-content">
+        <div class="resource-card-title" @click="handleToggle('backendConfig')">
+          <i class="bk-icon icon-right-shape"></i>
+          {{ $t('后端配置') }}
+        </div>
         <div class="panel-wrapper">
           <bk-form ref="backendForm" :label-width="190" :model="curResource">
             <bk-form-item label="" style="height: 30px;" v-if="ResourceWithMockEnabledFlag">
@@ -585,119 +626,23 @@
       </div>
     </section>
 
-    <section class="ag-panel">
-      <div class="panel-key">
-        <strong>{{ $t('安全设置') }}</strong>
-      </div>
-      <div class="panel-content">
-        <div class="panel-wrapper">
-          <bk-form :label-width="190">
-            <bk-form-item :label="$t('应用认证')">
-              <bk-switcher
-                class="mr20"
-                size="small"
-                theme="primary"
-                :disabled="!curApigw.allow_update_api_auth"
-                v-model="curResource.auth_config.app_verified_required">
-              </bk-switcher>
-              <bk-checkbox
-                :true-value="true"
-                :false-value="false"
-                :disabled="!curResource.auth_config.app_verified_required || !curApigw.allow_update_api_auth"
-                v-model="curResource.auth_config.resource_perm_required">
-                {{ $t('校验访问权限') }}
-              </bk-checkbox>
-              <p class="ag-tip mt5">
-                <i class="apigateway-icon icon-ag-info"></i>
-                {{ $t('应用认证，请求方需提供蓝鲸应用身份信息；校验访问权限，蓝鲸应用需申请资源访问权限。') }}
-                <a :href="GLOBAL_CONFIG.DOC.AUTH" target="_blank" class="ag-primary">{{ $t('更多详情') }}</a>
-              </p>
-            </bk-form-item>
-            <bk-form-item :label="$t('用户认证')">
-              <bk-switcher
-                v-model="curResource.auth_config.auth_verified_required"
-                size="small"
-                theme="primary">
-              </bk-switcher>
-              <p class="ag-tip mt5">
-                <i class="apigateway-icon icon-ag-info"></i>
-                {{ $t('用户认证，请求方需提供蓝鲸用户身份信息。') }}
-                <a :href="GLOBAL_CONFIG.DOC.AUTH" target="_blank" class="ag-primary">{{ $t('更多详情') }}</a>
-              </p>
-            </bk-form-item>
-
-            <span class="ag-span" v-if="resourceDisableStageEnabledFlag"></span>
-
-            <bk-form-item :label="$t('禁用环境')" v-if="resourceDisableStageEnabledFlag">
-              <bk-select
-                searchable
-                multiple
-                show-select-all
-                v-model="curResource.disabled_stage_ids">
-                <bk-option v-for="option in stageList"
-                  :key="option.id"
-                  :id="option.id"
-                  :name="option.name">
-                </bk-option>
-              </bk-select>
-              <!-- <bk-tag-input
-                                placeholder="请选择"
-                                :content-max-height="200"
-                                v-model="curResource.disabled_stage_ids"
-                                :trigger="'focus'"
-                                :list="stageList"
-                                :allow-next-focus="false">
-                            </bk-tag-input> -->
-              <p class="ag-tip mt10">
-                <i class="apigateway-icon icon-ag-info"></i>
-                {{ $t('资源将不会发布到对应的环境') }}
-              </p>
-            </bk-form-item>
-          </bk-form>
-        </div>
+    <section class="panel-footer-operate">
+      <div class="btn-wrapper" :style="{ 'margin-left': footerMarginLeft + 'px' }">
+        <bk-button
+          class="mr5"
+          theme="primary"
+          style="width: 120px;"
+          :loading="isDataLoading"
+          @click="submitApigwResource">
+          {{ $t('提交') }}
+        </bk-button>
+        <bk-button
+          style="width: 120px;"
+          @click="handleApigwResourceCancel">
+          {{ $t('取消') }}
+        </bk-button>
       </div>
     </section>
-
-    <section class="ag-panel-action mt20">
-      <div class="panel-content" style="margin-left: 270px;">
-        <div class="panel-wrapper tc">
-          <bk-button
-            class="mr5"
-            theme="primary"
-            style="width: 120px;"
-            :loading="isDataLoading"
-            @click="submitApigwResource">
-            {{ $t('提交') }}
-          </bk-button>
-          <bk-button
-            style="width: 120px;"
-            @click="handleApigwResourceCancel">
-            {{ $t('取消') }}
-          </bk-button>
-        </div>
-      </div>
-    </section>
-
-    <bk-dialog
-      v-model="labelDialogConf.visiable"
-      theme="primary"
-      :width="480"
-      :header-position="'left'"
-      :title="labelDialogConf.title"
-      :loading="labelDialogConf.isLoading"
-      @confirm="handleSubmitLabel"
-      @cancel="handleCancel">
-      <bk-form
-        :label-width="200"
-        form-type="vertical"
-        :model="curLabel"
-        :rules="labelRules"
-        ref="labelForm">
-        <bk-form-item :label="$t('标签名称')" :required="true" :property="'name'">
-          <bk-input v-model="curLabel.name"></bk-input>
-        </bk-form-item>
-      </bk-form>
-    </bk-dialog>
   </div>
 </template>
 
@@ -706,10 +651,13 @@
   import ApigwKeyValuer from '@/components/key-valuer'
   // import ApigwKeyer from '@/components/keyer'
   import ApigwItem from '@/components/item'
+  import { bus } from '@/common/bus'
 
   const httpCodes = [200, 201, 202, 203, 204, 205, 206, 300, 301, 302, 303, 304, 305, 306, 307, 400, 401, 402, 403, 404, 405, 406, 407, 408, 409, 410, 411, 412, 413, 414, 415, 416, 417, 450, 451, 500, 501, 502, 503, 504, 505]
 
   const labelMaxWidth = 400
+  const expandWidth = 243
+  const awayWidth = 64
 
   export default {
     components: {
@@ -719,18 +667,12 @@
     },
     data () {
       return {
-        varIndex: 0,
         isPageLoading: true,
         isDataLoading: false,
         labelList: [],
         stageList: [],
         resourceAddrs: [],
         isResourceAddrShow: false,
-        labelDialogConf: {
-          isLoading: false,
-          visiable: false,
-          title: this.$t('新建标签')
-        },
         baseStageInfo: {
           timeouts: [],
           hosts: [],
@@ -845,6 +787,12 @@
           path: ''
         },
         cloneTips: this.$t('请求方法+请求路径在网关下唯一，请至少调整其中一项'),
+        isExpandedConfig: {
+          baseInfo: true,
+          webConfig: true,
+          backendConfig: true
+        },
+        footerMarginLeft: expandWidth,
         rules: {
           name: [
             {
@@ -985,6 +933,9 @@
       },
       isCloneFlag () {
         return this.cloneData.method !== this.curResource.method || this.cloneData.path !== this.curResource.path
+      },
+      bkNavWidth () {
+        return document.querySelector('.navigation-nav').offsetWidth > 60 ? expandWidth : awayWidth
       }
     },
     watch: {
@@ -1013,6 +964,7 @@
         this.getApigwStages()
         this.getApigwLabels()
         this.getApigwStageBaseInfo()
+        this.setFooterNav()
 
         if (this.resourceId !== undefined) {
           this.getResourceDetail()
@@ -1552,8 +1504,6 @@
           // this.goResourceIndex()
         } catch (e) {
           catchErrorHandler(e, this)
-        } finally {
-          // this.isDataLoading = false
         }
       },
 
@@ -1582,13 +1532,6 @@
         this.curResource.proxy_configs.mock.body = content
       },
 
-      handleShowLabelDialog () {
-        this.curLabel.name = ''
-        this.curLabel.id = undefined
-        this.labelDialogConf.title = this.$t('新建标签')
-        this.labelDialogConf.visiable = true
-      },
-
       handleShowLabel () {
         if (!this.isCreateLabel) {
           this.isCreateLabel = true
@@ -1600,16 +1543,8 @@
       },
 
       handleSubmitLabel () {
-        if (this.labelDialogConf.isLoading) {
-          return false
-        }
-        this.labelDialogConf.isLoading = true
         this.$refs.labelForm.validate().then(() => {
           this.addLabel()
-        }).catch(() => {
-          this.$nextTick(() => {
-            this.labelDialogConf.isLoading = false
-          })
         })
       },
 
@@ -1638,7 +1573,6 @@
           const apigwId = this.apigwId
           const res = await this.$store.dispatch('label/addApigwLabel', { apigwId, data })
           this.curResource.label_ids.push(res.data.id)
-          this.labelDialogConf.visiable = false
           this.clearLabelForm()
           this.getApigwLabels()
           this.abrogate()
@@ -1648,8 +1582,6 @@
           })
         } catch (e) {
           catchErrorHandler(e, this)
-        } finally {
-          this.labelDialogConf.isLoading = false
         }
       },
 
@@ -1735,6 +1667,18 @@
             content: this.cloneTips
           })
         }, 0)
+      },
+      setFooterNav () {
+        bus.$on('nav-toggle', (opened) => {
+          this.footerMarginLeft = opened ? expandWidth : awayWidth
+        })
+        this.$once('hook:beforeDestroy', () => {
+          bus.$off('nav-toggle')
+        })
+        this.footerMarginLeft = this.bkNavWidth
+      },
+      handleToggle (key) {
+        this.isExpandedConfig[key] = !this.isExpandedConfig[key]
       }
     }
   }
@@ -1912,8 +1856,11 @@
             }
         }
     }
-    .resource-wrapper .ag-tip {
-        white-space: normal !important;
+    .resource-wrapper {
+        margin-bottom: 52px;
+        .ag-tip {
+            white-space: normal !important;
+        }
     }
     .hosts-append-wrapper {
         i {
@@ -1934,6 +1881,22 @@
         align-items: center;
         .bk-form-control {
             flex: 1;
+        }
+    }
+    .panel-footer-operate {
+        position: fixed;
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 52px;
+        line-height: 52px;
+        padding-left: 20px;
+        background: #FFF;
+        border-top: 1px solid #DCDEE5;
+        z-index: 99;
+
+        .btn-wrapper {
+            transition: .3s;
         }
     }
 </style>

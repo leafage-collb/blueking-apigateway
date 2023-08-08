@@ -351,7 +351,8 @@
                   v-else
                   :ref="option.name"
                   v-model="option.name"
-                  @enter="handleLabelEdit(option)"></bk-input>
+                  @enter="handleLabelEdit(option)"
+                  @blur="handleLabelEdit(option)"></bk-input>
               </div>
               <div slot="extension" class="slot-ag add-label-slot" @click="handleShowLabel" @mouseenter="changeLabelBg">
                 <template v-if="isCreateLabel">
@@ -2564,6 +2565,13 @@
     .custom-option {
       margin-top: 0 !important;
       margin-bottom: 0 !important;
+      .bk-checkbox-text {
+        display: inline-block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        width: 172px;
+      }
     }
     .icon-edit-custom,
     .icon-delet-custom {

@@ -1020,6 +1020,7 @@
       handleToggle (opened) {
         this.nav.toggle = opened
         this.menuOpened = opened
+        bus.$emit('nav-toggle', opened)
       },
       handleToggleClick (opened) {
         this.menuOpened = opened
