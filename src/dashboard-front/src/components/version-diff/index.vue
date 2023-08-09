@@ -408,8 +408,8 @@
           method = method.replace(reg, `<i class="keyword ag-strong primary">$1</i>`)
           path = path.replace(reg, `<i class="keyword ag-strong primary">$1</i>`)
         }
-                
-        return `【${method}】${path}`
+        
+        return `<span class="ag-tag ${method.toLowerCase()} mr10">${method}</span><span class="path">${path}</span>`
       },
 
       handleVersionChange () {
@@ -587,12 +587,15 @@
                 line-height: 36px;
                 border-radius: 2px;
                 background: #F0F1F5;
-                border: 1px solid #F0F1F5;
                 font-size: 12px;
                 font-weight: bold;
                 color: #63656E;
                 padding-left: 10px;
                 cursor: pointer;
+
+                i {
+                    color: #63656E;
+                }
 
                 .resource-title {
                     position: relative;
@@ -614,15 +617,18 @@
                 }
 
                 &.danger {
-                    background: #FEDDDC;
-                    border-color: #FE9C9C;
+                    background: #FEF2F2;
+                    span {
+                        color: #EA3636;
+                    }
 
-                    .resource-title {
+                    /deep/ .path {
+                        position: relative;
                         &::after {
                             content: '';
                             width: 100%;
                             height: 1px;
-                            background: #63656E;
+                            background: #C14846;
                             position: absolute;
                             left: 0;
                             top: 50%;
@@ -631,13 +637,17 @@
                 }
 
                 &.success {
-                    background: #DCFFE2;
-                    border-color: #94F5A4;
+                    background: #F0FCF4;
+                    span {
+                        color: #2DCB56;
+                    }
                 }
 
                 &.warning {
-                    background: #FFE8C3;
-                    border-color: #FFD694;
+                    background: #FFF9EF;
+                    span {
+                        color: #FF9C01;
+                    }
                 }
             }
         }

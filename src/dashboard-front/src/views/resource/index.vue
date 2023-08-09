@@ -265,7 +265,7 @@
           </template>
           <span v-else>
             <span class="document-info" @click.stop="handleShowDoc(props.row, localLanguage === 'en' ? 'en' : 'zh')">
-              <i class="bk-icon apigateway-icon icon-ag-document" slot="dropdown-trigger"></i>
+              <i class="apigateway-icon icon-ag-doc-2" slot="dropdown-trigger"></i>
               {{ $t('详情') }}
             </span>
             <!-- <span
@@ -281,8 +281,6 @@
         prop="labels"
         column-key="label"
         width="300"
-        :filters="tagFilters"
-        :filter-multiple="false"
         :show-overflow-tooltip="false"
         key="label">
         <template slot-scope="props">
@@ -302,7 +300,6 @@
                     <template v-if="props.row.labels.length > props.row.tagOrder">
                       <span class="new-ag-label vm mb5">
                         +{{ props.row.labels.length - props.row.tagOrder }}
-                        <!-- ... -->
                       </span>
                     </template>
                   </span>
@@ -325,21 +322,38 @@
               searchable
               multiple
               display-tag
-              ref="multiSelect"
+              selected-style="checkbox"
               :auto-height="false"
               :show-on-init="true"
               v-model="labelsIds"
               @toggle="toggleSelect"
               @change="changeSelect">
               <!-- 标签最多选择十个 -->
-              <bk-option v-for="option in labelList"
-                v-bk-tooltips="{ content: $t('标签最多只能选择10个'), disabled: !(!labelsIds.includes(option.id) && labelsIds.length >= 10) }"
+              <div
+                v-for="option in labelList"
                 :key="option.id"
-                :id="option.id"
-                :name="option.name"
-                :disabled="!labelsIds.includes(option.id) && labelsIds.length >= 10">
-              </bk-option>
-              <div slot="extension" style="cursor: pointer;" class="slot-ag" @click="handleShowLabel" @mouseenter="changeLabelBg">
+                :class="['option-wrapper-cls', { 'option-edit': option.isEdit }]">
+                <template v-if="!option.isEdit">
+                  <bk-option
+                    class="custom-option"
+                    v-bk-tooltips="{ content: $t('标签最多只能选择10个'), disabled: !(!labelsIds.includes(option.id) && labelsIds.length >= 10) }"
+                    :key="option.id"
+                    :id="option.id"
+                    :name="option.name"
+                    :disabled="!labelsIds.includes(option.id) && labelsIds.length >= 10">
+                  </bk-option>
+                  <div class="label-option-operate">
+                    <i class="apigateway-icon icon-ag-edit-line icon-edit-custom" @click.stop="editTag(option)"></i>
+                    <i class="apigateway-icon icon-ag-delet icon-delet-custom" @click.stop="removeLabel(option)"></i>
+                  </div>
+                </template>
+                <bk-input
+                  v-else
+                  :ref="option.name"
+                  v-model="option.name"
+                  @enter="handleLabelEdit(option)"></bk-input>
+              </div>
+              <div slot="extension" class="slot-ag add-label-slot" @click="handleShowLabel" @mouseenter="changeLabelBg">
                 <template v-if="isCreateLabel">
                   <div class="slot-wrapper">
                     <div class="input-wrapper">
@@ -404,36 +418,44 @@
         key="updateTime"
         :render-header="$renderHeader">
       </bk-table-column>
-      <bk-table-column :label="$t('操作')" width="90" class="ag-action" fixed="right" :show-overflow-tooltip="false">
+      <bk-table-column :label="$t('操作')" width="120" class="ag-action" fixed="right" :show-overflow-tooltip="false">
         <template slot-scope="props">
           <bk-button
-            class="mr5"
+            class="mr15"
             theme="primary"
             text
             @click.stop="handleEditResource(props.row)">
             {{ $t('编辑') }}
           </bk-button>
-          <bk-dropdown-menu
-            ref="dropdown"
-            align="right"
-            position-fixed
-            @show="isSubOperation = true"
-            @hide="isSubOperation = false">
+          <bk-button
+            class="mr15"
+            theme="primary"
+            text
+            @click.stop="handleCloneResource(props.row)">
+            {{ $t('克隆') }}
+          </bk-button>
+          <bk-button
+            theme="primary"
+            text
+            @click.stop="handleDeleteResource(props.row)">
+            {{ $t('删除') }}
+          </bk-button>
+          <!-- <bk-dropdown-menu ref="dropdown" align="right" position-fixed>
             <i class="bk-icon icon-more ag-more-btn ml10 icon-more-hover" slot="dropdown-trigger"></i>
             <ul class="bk-dropdown-list" slot="dropdown-content" style="width: 80px; ">
-              <!-- <li>
-                                <a href="javascript:;" @click.stop="handleShowDoc(props.row)">文档</a>
-                            </li> -->
-              <!-- <template v-if="props.row.resource_doc_languages.length < 2">
-                                <li>
-                                    <a href="javascript:;" @click="handleShowDoc(props.row, switchLanguages(props.row.resource_doc_languages))"> {{ $t('添加文档') }} </a>
-                                </li>
-                            </template>
-                            <template v-else>
-                                <li class="disabled" v-bk-tooltips.left="{ content: $t('文档已添加') , boundary: 'window' }">
-                                    <a href="javascript:;"> {{ $t('添加文档') }} </a>
-                                </li>
-                            </template> -->
+              <li>
+                  <a href="javascript:;" @click.stop="handleShowDoc(props.row)">文档</a>
+              </li>
+              <template v-if="props.row.resource_doc_languages.length < 2">
+                  <li>
+                      <a href="javascript:;" @click="handleShowDoc(props.row, switchLanguages(props.row.resource_doc_languages))"> {{ $t('添加文档') }} </a>
+                  </li>
+              </template>
+              <template v-else>
+                  <li class="disabled" v-bk-tooltips.left="{ content: $t('文档已添加') , boundary: 'window' }">
+                      <a href="javascript:;"> {{ $t('添加文档') }} </a>
+                  </li>
+              </template>
               <li>
                 <a href="javascript:;" @click.stop="handleCloneResource(props.row)"> {{ $t('克隆') }} </a>
               </li>
@@ -441,7 +463,7 @@
                 <a href="javascript:;" @click.stop="handleDeleteResource(props.row)"> {{ $t('删除') }} </a>
               </li>
             </ul>
-          </bk-dropdown-menu>
+          </bk-dropdown-menu> -->
         </template>
       </bk-table-column>
       <bk-table-column type="setting">
@@ -930,7 +952,8 @@
           isAbnormal: false
         },
         isEnter: false,
-        isSubOperation: false
+        oldLabelName: '',
+        isLabelChangeFlag: false
       }
     },
     computed: {
@@ -945,15 +968,6 @@
 
           }
         })
-      },
-      tagFilters () {
-        const labels = this.labelList.map(item => {
-          return {
-            value: item.name,
-            text: item.name
-          }
-        })
-        return labels
       },
       hasSelected () {
         return this.resourceSelectedList.length > 0
@@ -984,6 +998,12 @@
       },
       localLanguage () {
         return this.$store.state.localLanguage
+      },
+      isLabelChange () {
+        if (this.isLabelChangeFlag) {
+          return false
+        }
+        return JSON.stringify(this.oldLabelsIds) === JSON.stringify(this.labelsIds)
       }
     },
     watch: {
@@ -1134,6 +1154,9 @@
           const res = await this.$store.dispatch('label/getApigwLabels', { apigwId, pageParams })
 
           this.labelList = res.data.results
+          this.labelList.forEach(label => {
+            label.isEdit = false
+          })
         } catch (e) {
           catchErrorHandler(e, this)
         }
@@ -1903,6 +1926,7 @@
         window.addEventListener('click', this.hideSelected)
         this.isEnter = true
         this.isCreateLabel = false
+        this.isLabelChangeFlag = false
         this.clearLabelForm()
       },
       handleShowLabel () {
@@ -2020,7 +2044,8 @@
       hideSelected (e, triggerType) {
         this.$nextTick(() => {
           if (!this.isParent(e.target, document.querySelector('.tippy-content'))) {
-            if (JSON.stringify(this.oldLabelsIds) === JSON.stringify(this.labelsIds)) {
+            // 是否更新列表
+            if (this.isLabelChange) {
               this.resourceList.forEach(item => {
                 item.isEditLabel = false
               })
@@ -2102,6 +2127,68 @@
       },
       removeEvent () {
         window.removeEventListener('click', this.hideSelected)
+      },
+
+      editTag (label) {
+        this.oldLabelName = label.name
+        this.changeTagEdit(true, label.id, 'isEdit')
+        this.$nextTick(() => {
+          this.$refs[label.name][0].focus()
+        })
+      },
+
+      changeTagEdit (value, labelId, labelName) {
+        this.labelList = this.labelList.map(item => {
+          if (item.id === labelId) {
+            item[labelName] = value
+          }
+          return item
+        })
+      },
+
+      // 更新标签
+      handleLabelEdit (label) {
+        this.updateLabel(label)
+        this.changeTagEdit(false, label.id, 'isEdit')
+      },
+
+      // 重命名标签
+      async updateLabel (label) {
+        try {
+          const data = { name: label.name }
+          const apigwId = this.apigwId
+          const labelId = label.id
+          await this.$store.dispatch('label/updateApigwLabel', { apigwId, labelId, data })
+          this.getApigwLabels()
+          this.isLabelChangeFlag = true
+
+          this.$bkMessage({
+            theme: 'success',
+            message: this.$t('更新成功！')
+          })
+        } catch (e) {
+          catchErrorHandler(e, this)
+          // 更改失败
+          this.changeTagEdit(this.oldLabelName, label.id, 'name')
+        }
+      },
+
+      // 删除标签
+      async removeLabel (label) {
+        try {
+          const apigwId = this.apigwId
+          const labelId = label.id
+          await this.$store.dispatch('label/deleteApigwLabel', { apigwId, labelId })
+          this.getApigwLabels()
+          this.isLabelChangeFlag = true
+
+          this.$bkMessage({
+            theme: 'success',
+            message: this.$t('删除成功！')
+          })
+        } catch (e) {
+          catchErrorHandler(e, this)
+        }
       }
     }
   }
@@ -2259,18 +2346,15 @@
     }
 
     .plus-class {
+        font-weight: 700;
         font-size: 12px;
         display: inline-block;
         padding: 5px;
         margin-left: -5px;
         border-radius: 2px;
         cursor: pointer;
-        color: #979BA5;
-        background: #EAEBF0;
-        &:hover {
-            color: #3A84FF;
-            background: #E1ECFF;
-        }
+        color: #3A84FF;
+        background: #E1ECFF;
     }
 
     .document-info {
@@ -2400,6 +2484,27 @@
             height: 52px;
         }
     }
+    .custom-option {
+        &:hover + .label-option-operate {
+            display: block;
+        }
+    }
+
+    .label-option-operate {
+        display: none;
+        position: absolute;
+        top: 0;
+        right: 5px;
+        z-index: 9999;
+
+        &:hover {
+          display: block;
+        }
+    }
+    .add-label-slot {
+        cursor: pointer;
+        text-align: center;
+    }
 </style>
 <style lang="postcss">
 .tippy-content{
@@ -2450,5 +2555,43 @@
 }
 .ag-expand-table .sub-operation{
     z-index: 99;
+}
+.ag-resources-table .ag-expand-table .is-last {
+    position: unset;
+}
+.option-wrapper-cls {
+    position: relative;
+    .custom-option {
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+    }
+    .icon-edit-custom,
+    .icon-delet-custom {
+      display: inline-block;
+      font-size: 12px;
+      width: 26px;
+      height: 26px;
+      line-height: 26px;
+      text-align: center;
+      color: #63656e;
+
+      &:hover {
+        color: #3A84FF;
+        cursor: pointer;
+      }
+    }
+    .icon-edit-custom {
+      margin-right: -5px;
+    }
+    &.option-edit {
+        padding: 0 16px;
+        background-color: #f4f6fa;
+    }
+    &:first-child {
+        margin-top: 6px !important;
+    }
+    &:last-child {
+        margin-bottom: 6px !important;
+    }
 }
 </style>

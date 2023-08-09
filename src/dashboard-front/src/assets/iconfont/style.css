@@ -53,6 +53,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .icon-ag-history:before {
 	content: "\e13e";
 }
+.icon-ag-delet:before {
+	content: "\e15d";
+}
 .icon-ag-down:before {
 	content: "\e114";
 }
@@ -248,11 +251,17 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .icon-ag-download:before {
 	content: "\e159";
 }
+.icon-ag-version:before {
+	content: "\e15c";
+}
 .icon-ag-miniapi:before {
 	content: "\e141";
 }
 .icon-ag-permission:before {
 	content: "\e142";
+}
+.icon-ag-doc-2:before {
+	content: "\e15b";
 }
 .icon-ag-edit-line:before {
 	content: "\e158";
