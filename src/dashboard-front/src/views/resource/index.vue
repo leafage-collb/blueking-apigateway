@@ -100,7 +100,10 @@
         </ul>
       </bk-dropdown-menu>
       <bk-button theme="default" @click="handleShowDiff"> {{ $t('版本对比') }} </bk-button>
-      <bk-button theme="default" @click="handleCreateResourceVersion"> {{ $t('去发布版本') }} </bk-button>
+      <bk-button theme="default" @click="handleCreateResourceVersion">
+        <i class="apigateway-icon icon-ag-version icon-version-customize"></i>
+        {{ $t('去发布版本') }}
+      </bk-button>
       <bk-input
         class="fr mr10"
         :clearable="true"
@@ -121,6 +124,7 @@
       :ext-cls="resourceList.length > 0 ? 'ag-resources-table' : 'ag-resource-table'"
       v-bkloading="{ isLoading: isDataLoading, opacity: 1, immediate: true }"
       :default-expand-all="false"
+      :row-style="handleRowStyle"
       @page-limit-change="handlePageLimitChange"
       @page-change="handlePageChange"
       @select="handlePageSelect"
@@ -168,7 +172,12 @@
                   <span v-else>--</span>
                 </template>
               </bk-table-column>
-              <bk-table-column prop="resource_url" :label="$t('资源地址')" :show-overflow-tooltip="false" :render-header="$renderHeader">
+              <bk-table-column
+                prop="resource_url"
+                :label="$t('资源地址')"
+                :show-overflow-tooltip="false"
+                :render-header="$renderHeader"
+                class-name="resource-url">
                 <template slot-scope="resourceItem">
                   <div class="resource-url-box" v-if="resourceItem.row.stage_release_status">
                     <bk-popover :content="resourceItem.row.resource_url">
@@ -184,7 +193,7 @@
                   <p v-else>--</p>
                 </template>
               </bk-table-column>
-              <bk-table-column width="90" :label="$t('操作')" :class-name="`${!isSubOperation ? 'sub-operation' : '' }`">
+              <bk-table-column width="90" :label="$t('操作')" class-name="sub-operation">
                 <template slot-scope="resourceItem">
                   <bk-button :disabled="!resourceItem.row.stage_release_status" :text="true" @click="handleShowReleaseResource(resourceItem, resourceItem.row)"> {{ $t('查看资源') }} </bk-button>
                 </template>
@@ -207,8 +216,11 @@
               <span>{{props.row.name || '--'}}</span>
             </span>
             <div>
-              <span class="ag-tag primary ml5" v-if="props.row.is_created"> {{ $t('新创建') }} </span>
-              <span class="ag-tag success ml5" v-else-if="props.row.has_updated"> {{ $t('有更新') }} </span>
+              <span
+                v-if="props.row.has_updated"
+                v-bk-tooltips="$t('资源已更新')"
+                class="ag-dot ml5 resource-updated">
+              </span>
             </div>
           </div>
         </template>
@@ -282,38 +294,25 @@
         column-key="label"
         width="300"
         :show-overflow-tooltip="false"
+        class-name="td-label-content"
         key="label">
         <template slot-scope="props">
-          <div
-            v-if="!props.row.isEditLabel"
-            :class="['label-wrapper', 'pl5', { 'label-item-wrapper': props.row.isRowHover }]"
-            @click.stop.prevent="tdClick(props.row)">
+          <div v-if="!props.row.isEditLabel" v-bk-overflow-tips="{ content: getLabelTips(props.row.labels) }">
             <template v-if="props.row.labels.length">
-              <bk-popover :content="props.row.labelText.join('; ')" ext-cls="popover-tips-cls">
-                <div class="tag-wrapper">
-                  <span :ref="props.row.name">
-                    <template v-for="(label, index) of props.row.labels">
-                      <span class="new-ag-label vm mb5" v-if="index < props.row.tagOrder" :key="label.id">
-                        {{label.name}}
-                      </span>
-                    </template>
-                    <template v-if="props.row.labels.length > props.row.tagOrder">
-                      <span class="new-ag-label vm mb5">
-                        +{{ props.row.labels.length - props.row.tagOrder }}
-                      </span>
-                    </template>
-                  </span>
-                </div>
-              </bk-popover>
-              <i v-show="props.row.isRowHover" class="dropdown-icon bk-icon icon-angle-down angle-down-class angle-down-tag"></i>
+              <template v-for="label of props.row.labels">
+                <span class="label-text" :key="label.id">
+                  {{label.name}} <span>,</span>
+                </span>
+              </template>
             </template>
             <template v-else>
-              <span class="empty" v-if="props.row.isAddLabel">
-                <span class="add-tag">{{ $t('添加标签') }}</span>
-                <i class="dropdown-icon bk-icon icon-angle-down angle-down-class"></i>
-              </span>
-              <span v-else>--</span>
+              --
             </template>
+            <i
+              v-show="props.row.isAddLabel"
+              class="apigateway-icon icon-ag-edit-line"
+              @click.stop.prevent="tdClick(props.row)">
+            </i>
           </div>
           <div v-else class="tag-input-wrapper pl10" @click.stop.prevent="selectClick">
             <bk-select
@@ -750,7 +749,7 @@
   import versionDiff from '@/components/version-diff'
   import _ from 'lodash'
   import { bkTableSettingContent } from 'bk-magic-vue'
-
+  
   Vue.use(mavonEditor)
   export default {
     components: {
@@ -2149,12 +2148,15 @@
 
       // 更新标签
       handleLabelEdit (label) {
-        this.updateLabel(label)
         this.changeTagEdit(false, label.id, 'isEdit')
+        if (this.oldLabelName === label.name) {
+          return
+        }
+        this.updateLabel(label)
       },
 
       // 重命名标签
-      async updateLabel (label) {
+      updateLabel: _.debounce(async function (label) {
         try {
           const data = { name: label.name }
           const apigwId = this.apigwId
@@ -2172,7 +2174,7 @@
           // 更改失败
           this.changeTagEdit(this.oldLabelName, label.id, 'name')
         }
-      },
+      }, 500),
 
       // 删除标签
       async removeLabel (label) {
@@ -2190,6 +2192,19 @@
         } catch (e) {
           catchErrorHandler(e, this)
         }
+      },
+
+      // row 样式
+      handleRowStyle (prop, index) {
+        if (prop.row.is_created) {
+          return { background: '#F2FFF4' }
+        }
+        return {}
+      },
+
+      getLabelTips (labels) {
+        const labelList = labels.map(label => label.name)
+        return labelList.join(', ')
       }
     }
   }
@@ -2506,6 +2521,10 @@
         cursor: pointer;
         text-align: center;
     }
+    .resource-updated {
+        background: #FFE8C3;
+        border: 1px solid #FF9C01;
+    }
 </style>
 <style lang="postcss">
 .tippy-content{
@@ -2554,11 +2573,11 @@
         }
     }
 }
-.ag-expand-table .sub-operation{
+.ag-expand-table {
+  .sub-operation,
+  .resource-url {
     z-index: 99;
-}
-.ag-resources-table .ag-expand-table .is-last {
-    position: unset;
+  }
 }
 .option-wrapper-cls {
     position: relative;
@@ -2601,5 +2620,28 @@
     &:last-child {
         margin-bottom: 6px !important;
     }
+}
+
+.td-label-content .cell {
+    position: relative;
+    .label-text:last-of-type {
+        span {
+            display: none;
+        }
+    }
+    .tag-edit-custom {
+        position: absolute;
+        right: 0;
+        top: 2px;
+        font-size: 14px;
+        cursor: pointer;
+        color: #979BA5;
+        &:hover {
+            color: #3A84FF;
+        }
+    }
+}
+.icon-version-customize {
+  color: #979BA5;
 }
 </style>
